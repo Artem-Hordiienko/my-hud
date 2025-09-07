@@ -1,0 +1,5 @@
+#myhud-badge{
+  position:fixed; top:16px; left:16px; z-index:999999;
+  background:rgba(0,0,0,.6); color:#fff; padding:6px 10px;
+  border-radius:8px; font:600 12px/1 Arial,sans-serif; pointer-events:none;
+}
