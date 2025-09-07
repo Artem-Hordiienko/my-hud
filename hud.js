@@ -1,15 +1,4 @@
 function AddHud() {
-    window.bayok = window.bayok || {};
-
-    // Функція для форматування чисел
-    function formatNumberWithDots(x) {
-        return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    }
-
-    const hudScript = document.currentScript;
-    const hudElements = [];
-
-    // URL до GitHub-репозиторію з ресурсами
     const baseUrl = "https://raw.githubusercontent.com/Artem-Hordiienko/my-hud/main/hud-assets/assets/";
 
     const hudConfig = {
@@ -33,21 +22,17 @@ function AddHud() {
         },
         logo: {
             "1": baseUrl + "0.png"
-        },
-        style: {
-            "authorization": "body .authorization{background:0 0;}#app .authorization{background-image:url()}"
         }
     };
 
-    // Використовуємо config для створення HUD
     function createHud() {
-        const hudStyleElement = document.createElement("link");
-        hudStyleElement.rel = "stylesheet";
-        hudStyleElement.href = "https://raw.githubusercontent.com/Artem-Hordiienko/my-hud/main/hud.css";
-        document.head.appendChild(hudStyleElement);
+        const hudStyle = document.createElement("link");
+        hudStyle.rel = "stylesheet";
+        hudStyle.href = "https://raw.githubusercontent.com/Artem-Hordiienko/my-hud/main/hud.css";
+        document.head.appendChild(hudStyle);
 
         const hudElement = document.createElement("div");
-        hudElement.id = 'OldHudContainer';
+        hudElement.id = "OldHudContainer";
         hudElement.innerHTML = `
         <div class="Old-Fixed-Hud">
           <div class="Old-Fixed-HudTop">
@@ -69,62 +54,16 @@ function AddHud() {
                         <img src="${hudConfig.icons.circle}" class="circle">
                       </div>
                     </div>
-                    <span class="Old-Param-Values">100</span>
-                  </div>
-                  <div class="Old-Fixed-Param armour">
-                    <img src="${hudConfig.icons.armour}" class="old-param__icon">
-                    <div class="Old-Param-Progress">
-                      <div class="Old-Progress__Values" style="width:100%">
-                        <img src="${hudConfig.icons.circle}" class="circle">
-                      </div>
-                    </div>
-                    <span class="Old-Param-Values">100</span>
-                  </div>
-                  <div class="Old-Fixed-Param hunger">
-                    <img src="${hudConfig.icons.hunger}" class="old-param__icon">
-                    <div class="Old-Param-Progress">
-                      <div class="Old-Progress__Values" style="width:100%">
-                        <img src="${hudConfig.icons.circle}" class="circle">
-                      </div>
-                    </div>
-                    <span class="Old-Param-Values">100</span>
-                  </div>
-                  <div class="Old-Fixed-Param breath">
-                    <img src="${hudConfig.icons.breath}" class="old-param__icon">
-                    <div class="Old-Param-Progress">
-                      <div class="Old-Progress__Values" style="width:100%">
-                        <img src="${hudConfig.icons.circle}" class="circle">
-                      </div>
-                    </div>
-                    <span class="Old-Param-Values">100</span>
                   </div>
                 </div>
-              </div>
-              <div class="Old-Fixed-Weapon">
-                <img src="${hudConfig.icons.weapon_back}" class="Old-Fixed-Weapon_back"> 
-                <img src="${hudConfig.weapon[24]}" class="Old-Fixed-Weapon_icon">
-                <div class="Old-Fixed-Weapon_ammo">
-                  <span class="Ammo-in-clip">30</span>
-                  <span class="Ammo-full">/120</span>
-                </div>
-              </div>
-            </div>
-            <div class="Old-Fixed-Wanted">
-              <img src="${hudConfig.icons.wanted_back}" class="Old-Fixed-Wanted_back">
-              <div class="Wanted_row">
-                <img src="${hudConfig.icons.inactive_wanted}">
-                <img src="${hudConfig.icons.inactive_wanted}">
-                <img src="${hudConfig.icons.inactive_wanted}">
-                <img src="${hudConfig.icons.active_wanted}">
-                <img src="${hudConfig.icons.active_wanted}">
               </div>
             </div>
           </div>
         </div>`;
         document.body.appendChild(hudElement);
-        hudElements.push(hudElement);
     }
 
-    createHud();
+    if (!document.getElementById("OldHudContainer")) {
+        createHud();
+    }
 }
-AddHud();
