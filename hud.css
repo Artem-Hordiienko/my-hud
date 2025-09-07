@@ -1,51 +1,7 @@
-.Old-Fixed-Hud {
-  position: fixed;
-  top: 20px;
-  left: 20px;
-  font-family: Arial, sans-serif;
-  z-index: 9999;
-}
-
-.Old-Fixed-Logo img {
+.hud-icon {
   width: 64px;
   height: 64px;
-}
-
-.Old-Fixed-Cash {
-  display: flex;
-  align-items: center;
-  font-size: 20px;
-  color: #00ff00;
-  margin-top: 10px;
-}
-
-.Old-Fixed-Cash img {
-  width: 32px;
-  height: 32px;
-  margin-right: 8px;
-}
-
-.Old-Fixed-Param {
-  margin-top: 5px;
-  display: flex;
-  align-items: center;
-}
-
-.Old-Fixed-Param img.old-param__icon {
-  width: 24px;
-  height: 24px;
-  margin-right: 5px;
-}
-
-.Old-Param-Progress {
-  background: #333;
-  width: 150px;
-  height: 10px;
-  border-radius: 5px;
-  overflow: hidden;
-}
-
-.Old-Progress__Values {
-  background: #0f0;
-  height: 100%;
+  background-image: url("https://raw.githubusercontent.com/Artem-Hordiienko/my-hud/main/hud-assets/assets/0.png");
+  background-size: contain;
+  background-repeat: no-repeat;
 }
