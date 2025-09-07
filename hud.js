@@ -1,26 +1,26 @@
+// hud.js — додаємо картинки HUD прямо у DOM
+
 window.addEventListener("load", () => {
-  console.log("HUD replacer loaded ✅");
+  console.log("HUD script loaded ✅");
 
-  // Заміна HP (сердечко)
-  const hpIcon = document.querySelector("img[src*='heart.png']");
-  if (hpIcon) {
-    hpIcon.src = "https://raw.githubusercontent.com/Artem-Hordiienko/my-hud/main/hud-assets/assets/0.png";
-  }
+  // Контейнер у грі (можна підчепитися до body або іншого блоку)
+  const container = document.createElement("div");
+  container.id = "my-hud-container";
+  container.style.position = "absolute";
+  container.style.top = "20px";
+  container.style.right = "20px";
+  container.style.zIndex = "9999";
 
-  // Заміна Їжі
-  const foodIcon = document.querySelector("img[src*='food.png']");
-  if (foodIcon) {
-    foodIcon.src = "https://raw.githubusercontent.com/Artem-Hordiienko/my-hud/main/hud-assets/assets/1.png";
-  }
-
-  // Заміна Грошей
-  const moneyIcon = document.querySelector("img[src*='money.png']");
-  if (moneyIcon) {
-    moneyIcon.src = "https://raw.githubusercontent.com/Artem-Hordiienko/my-hud/main/hud-assets/assets/24.png";
-  }
-
-  // Заміна Зброї (приклад)
-  document.querySelectorAll(".weapon-slot img").forEach((img, i) => {
-    img.src = `https://raw.githubusercontent.com/Artem-Hordiienko/my-hud/main/hud-assets/assets/${25+i}.png`;
+  // Приклади іконок
+  const icons = ["0.png", "1.png", "24.png", "25.png", "31.png"];
+  icons.forEach(file => {
+    const img = document.createElement("img");
+    img.src = `https://raw.githubusercontent.com/Artem-Hordiienko/my-hud/main/hud-assets/assets/${file}`;
+    img.style.width = "48px";
+    img.style.height = "48px";
+    img.style.margin = "4px";
+    container.appendChild(img);
   });
+
+  document.body.appendChild(container);
 });
