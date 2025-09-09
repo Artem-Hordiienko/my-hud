@@ -1,26 +1,23 @@
-// hud.js — додаємо картинки HUD прямо у DOM
+// Підключення hud.css з GitHub
+const link = document.createElement("link");
+link.rel = "stylesheet";
+link.href = "https://raw.githubusercontent.com/Artem-Hordiienko/my-hud/main/hud.css";
+document.head.appendChild(link);
 
-window.addEventListener("load", () => {
-  console.log("HUD script loaded ✅");
+// Створюємо контейнер HUD
+const hud = document.createElement("div");
+hud.className = "old-hud";
 
-  // Контейнер у грі (можна підчепитися до body або іншого блоку)
-  const container = document.createElement("div");
-  container.id = "my-hud-container";
-  container.style.position = "absolute";
-  container.style.top = "20px";
-  container.style.right = "20px";
-  container.style.zIndex = "9999";
+// Додаємо приклади елементів з картинками
+hud.innerHTML = `
+  <div class="old-top">
+    <div class="hud-icon" 
+         style="background-image: url('https://raw.githubusercontent.com/Artem-Hordiienko/my-hud/main/hud-assets/assets/0.png');">
+    </div>
+    <div class="hud-icon" 
+         style="background-image: url('https://raw.githubusercontent.com/Artem-Hordiienko/my-hud/main/hud-assets/assets/1.png');">
+    </div>
+  </div>
+`;
 
-  // Приклади іконок
-  const icons = ["0.png", "1.png", "24.png", "25.png", "31.png"];
-  icons.forEach(file => {
-    const img = document.createElement("img");
-    img.src = `https://raw.githubusercontent.com/Artem-Hordiienko/my-hud/main/hud-assets/assets/${file}`;
-    img.style.width = "48px";
-    img.style.height = "48px";
-    img.style.margin = "4px";
-    container.appendChild(img);
-  });
-
-  document.body.appendChild(container);
-});
+document.body.appendChild(hud);
