@@ -1,21 +1,39 @@
-const hudIcons = {
-  heart: "https://raw.githubusercontent.com/Artem-Hordiienko/my-hud/main/hud-assets/assets/0.png",
-  food:  "https://raw.githubusercontent.com/Artem-Hordiienko/my-hud/main/hud-assets/assets/1.png",
-  fish:  "https://raw.githubusercontent.com/Artem-Hordiienko/my-hud/main/hud-assets/assets/24.png",
-  gun:   "https://raw.githubusercontent.com/Artem-Hordiienko/my-hud/main/hud-assets/assets/25.png",
-  car:   "https://raw.githubusercontent.com/Artem-Hordiienko/my-hud/main/hud-assets/assets/31.png"
-};
+// hud.js – Hybrid mode (підміна ресурсів)
+(function() {
+    console.log("[HUD] Hybrid mode loaded");
 
-// приклад вставки іконки в DOM:
-window.addEventListener("DOMContentLoaded", () => {
-  const hud = document.createElement("div");
-  hud.id = "custom-hud";
-  hud.innerHTML = `
-    <img src="${hudIcons.heart}" alt="HP">
-    <img src="${hudIcons.food}" alt="Food">
-    <img src="${hudIcons.fish}" alt="Fish">
-    <img src="${hudIcons.gun}" alt="Gun">
-    <img src="${hudIcons.car}" alt="Car">
-  `;
-  document.body.appendChild(hud);
-});
+    // Базовий шлях до твоїх картинок на GitHub
+    const baseUrl = "https://raw.githubusercontent.com/Artem-Hordiienko/my-hud/main/hud-assets/";
+
+    // Словник: який елемент -> яка нова картинка
+    const replacements = {
+        ".hud-health-icon": "0.png",    // клас із гри -> твій файл
+        ".hud-armor-icon": "1.png",
+        ".hud-hunger-icon": "24.png",
+        ".hud-money-icon": "25.png",
+        ".hud-level-icon": "31.png"
+    };
+
+    function applyReplacements() {
+        for (const selector in replacements) {
+            const el = document.querySelector(selector);
+            if (el) {
+                const newImg = baseUrl + replacements[selector];
+                if (el.tagName === "IMG") {
+                    el.src = newImg;
+                } else {
+                    el.style.backgroundImage = `url(${newImg})`;
+                }
+            }
+        }
+    }
+
+    // Чекаємо завантаження DOM
+    document.addEventListener("DOMContentLoaded", () => {
+        console.log("[HUD] DOM loaded, applying replacements...");
+        applyReplacements();
+
+        // Якщо HUD перемальовується під час гри — пробуємо ще
+        setInterval(applyReplacements, 2000);
+    });
+})();
