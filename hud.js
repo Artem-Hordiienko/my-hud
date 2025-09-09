@@ -1,133 +1,148 @@
-// HYBRID HUD v2 — заміна будь-яких assets/… у IMG, inline style та CSS-правилах
-(function () {
-  const BASE = "https://raw.githubusercontent.com/Artem-Hordiienko/my-hud/main/hud-assets/";
+// === HUD replacer (hybrid) ===
+// ВАЖЛИВО: у repo файли лежать у hud-assets/assets/*
+// Тому BASE має закінчуватись на ".../hud-assets/assets/"
 
-  // Якщо твої файли мають інші імена — вкажи тут відповідність:
-  // "оригінал з гри" : "твоє_ім'я_файлу.png"
-  const NAME_MAP = {
-    // "0.png": "0.png",
-    // "1.png": "1.png",
-    // "24.png": "24.png",
-    // "25.png": "25.png",
-    // "31.png": "31.png",
-  };
+const BASE = "https://raw.githubusercontent.com/Artem-Hordiienko/my-hud/main/hud-assets/assets/";
 
-  function toRemote(rel) {
-    const file = NAME_MAP[rel] || rel;
-    return BASE + file;
-  }
+// Якщо треба перейменування окремих файлів — додай тут.
+// Напр.: {"old_name.png":"new_name.png"}
+const NAME_MAP = {
+  // "health.png": "0.png",
+  // "armor.png": "1.png",
+};
 
-  function log(...args) {
-    try { console.log("[HUD]", ...args); } catch (e) {}
-  }
+function toRemote(rel) {
+  // rel може бути "assets/0.png", "/uiresources/assets/0.png", "0.png" тощо
+  let file = rel
+    .replace(/\\/g, '/')
+    .replace(/^.*?(assets\/)/, '') // обрізаємо все до "assets/"
+    .replace(/^.*?\//, match => (match.endsWith('/') ? '' : match)); // якщо без "assets/", лишаємо як є
 
-  log("Hybrid mode loaded");
+  // Застосуємо map, якщо потрібно інше ім’я
+  if (NAME_MAP[file]) file = NAME_MAP[file];
 
-  // ---- IMG <img src=".../assets/foo.png"> → GitHub ----
-  function swapImg(img) {
-    try {
-      const src = img.getAttribute("src") || "";
-      // ловимо .../assets/<name>
-      const m = src.match(/(?:^|[\\/])assets[\\/](.+?)(?:$|\?|#)/i);
-      if (!m) return;
-      const rel = m[1];
-      const newUrl = toRemote(rel);
-      if (src !== newUrl) {
-        img.setAttribute("src", newUrl);
-        img.setAttribute("data-hud-remote", "1");
-        log("IMG replaced:", rel, "→", newUrl);
-      }
-    } catch (e) {}
-  }
+  return BASE + file;
+}
 
-  // ---- Inline background-image: url(assets/foo.png) → GitHub ----
-  function swapStyle(el) {
-    try {
-      const style = el.style && el.style.backgroundImage ? el.style.backgroundImage : "";
-      if (!style) return;
-      const m = style.match(/assets[\\/](.+?)(?:["')]|$)/i);
-      if (!m) return;
-      const rel = m[1];
-      const newUrl = toRemote(rel);
-      el.style.backgroundImage = `url("${newUrl}")`;
-      el.setAttribute("data-hud-remote", "1");
-      log("STYLE replaced:", rel, "→", newUrl);
-    } catch (e) {}
-  }
+function replaceImgElement(img) {
+  const src = img.getAttribute('src') || '';
+  if (!src) return;
+  if (!/assets\//.test(src)) return;
 
-  // ---- Патчимо CSS-таблиці стилів: url(assets/foo.png) → GitHub ----
-  function patchStylesheets() {
-    for (const ss of Array.from(document.styleSheets)) {
-      let rules;
-      try {
-        rules = ss.cssRules; // може кинути SecurityError — пропускаємо
-      } catch (e) { continue; }
-      if (!rules) continue;
+  const remote = toRemote(src);
+  if (img.dataset.hudReplaced === remote) return; // вже міняли
 
-      for (const rule of Array.from(rules)) {
-        if (!rule.style) continue;
+  img.addEventListener('error', () => {
+    console.warn('[HUD] image 404:', remote, ' <- from ', src);
+  }, { once: true });
 
-        // background / background-image
-        if (rule.style.backgroundImage && /assets[\\/]/i.test(rule.style.backgroundImage)) {
-          const m = rule.style.backgroundImage.match(/assets[\\/](.+?)(?:["')]|$)/i);
-          if (m) {
-            const rel = m[1];
-            const newUrl = toRemote(rel);
-            rule.style.backgroundImage = `url("${newUrl}")`;
-            log("CSS bg-image:", rel, "→", newUrl);
-          }
+  img.setAttribute('src', remote);
+  img.dataset.hudReplaced = remote;
+}
+
+function replaceSrcset(el) {
+  const srcset = el.getAttribute('srcset');
+  if (!srcset) return;
+
+  const parts = srcset.split(',').map(s => s.trim()).map(entry => {
+    // "assets/0.png 2x" -> ["assets/0.png","2x"]
+    const m = entry.match(/^(\S+)(\s+\S+)?$/);
+    if (!m) return entry;
+    const orig = m[1];
+    if (!/assets\//.test(orig)) return entry;
+    const rem = toRemote(orig);
+    return rem + (m[2] || '');
+  });
+
+  el.setAttribute('srcset', parts.join(', '));
+}
+
+function replaceInlineStyle(el) {
+  const style = el.getAttribute('style') || '';
+  if (!style) return;
+  if (!/url\(/.test(style)) return;
+
+  const newStyle = style.replace(/url\(["']?(.*?)["']?\)/g, (all, url) => {
+    if (!/assets\//.test(url)) return all;
+    return `url("${toRemote(url)}")`;
+  });
+
+  if (newStyle !== style) el.setAttribute('style', newStyle);
+}
+
+function patchStylesheets() {
+  for (const sheet of Array.from(document.styleSheets)) {
+    let rules;
+    try { rules = sheet.cssRules; } catch { continue; } // CORS — пропускаємо
+    if (!rules) continue;
+
+    for (const rule of Array.from(rules)) {
+      if (!rule.style) continue;
+      if (!rule.style.cssText) continue;
+
+      const txt = rule.style.cssText;
+      if (txt.includes('url(')) {
+        const patched = txt.replace(/url\(["']?(.*?)["']?\)/g, (all, url) => {
+          if (!/assets\//.test(url)) return all;
+          return `url("${toRemote(url)}")`;
+        });
+        if (patched !== txt) {
+          try { rule.style.cssText = patched; } catch {}
         }
-        if (rule.style.background && /assets[\\/]/i.test(rule.style.background)) {
-          const m = rule.style.background.match(/assets[\\/](.+?)(?:["')]|$)/i);
-          if (m) {
-            const rel = m[1];
-            const newUrl = toRemote(rel);
-            rule.style.background = rule.style.background.replace(/url\([^)]+\)/, `url("${newUrl}")`);
-            log("CSS background:", rel, "→", newUrl);
-          }
-        }
-        // інші властивості з url(...) за потреби можна додати тут.
       }
     }
   }
+}
 
-  function processRoot(root) {
-    root.querySelectorAll("img[src]").forEach(swapImg);
-    root.querySelectorAll('[style*="assets/"],[style*="assets\\\\"]').forEach(swapStyle);
-  }
+function sweepDOM(root = document) {
+  // <img>
+  root.querySelectorAll('img[src*="assets/"]').forEach(replaceImgElement);
+  // srcset: <img>, <source>, <picture>
+  root.querySelectorAll('[srcset*="assets/"]').forEach(replaceSrcset);
+  // inline background-image тощо
+  root.querySelectorAll('[style*="url("]').forEach(replaceInlineStyle);
+}
 
-  function runFullPass() {
-    try {
-      processRoot(document);
-      patchStylesheets();
-    } catch (e) {}
-  }
+(function main() {
+  console.log('[HUD] hybrid replacer active');
 
-  // Стартувати після побудови DOM + повтори (інтерфейс у грі динамічний)
-  document.addEventListener("DOMContentLoaded", () => {
-    log("DOM loaded, applying replacements...");
-    runFullPass();
+  // 1) Одразу — для поточного DOM
+  sweepDOM();
+  patchStylesheets();
 
-    // Слухаємо динамічні зміни
-    const mo = new MutationObserver((muts) => {
-      for (const m of muts) {
-        m.addedNodes.forEach((n) => {
-          if (n instanceof Element) processRoot(n);
+  // 2) При зміні DOM (SPA-сторінки/додавання елементів)
+  const mo = new MutationObserver(muts => {
+    for (const m of muts) {
+      if (m.type === 'childList') {
+        m.addedNodes.forEach(n => {
+          if (n.nodeType === 1) {
+            sweepDOM(n);
+          }
         });
-        if (m.type === "attributes" && m.target instanceof Element) {
-          if (m.attributeName === "src") swapImg(m.target);
-          if (m.attributeName === "style") swapStyle(m.target);
+      } else if (m.type === 'attributes') {
+        if (m.attributeName === 'src' && m.target.tagName === 'IMG') {
+          replaceImgElement(m.target);
+        } else if (m.attributeName === 'style') {
+          replaceInlineStyle(m.target);
+        } else if (m.attributeName === 'srcset') {
+          replaceSrcset(m.target);
         }
       }
-    });
-    mo.observe(document.documentElement, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["src", "style"],
-    });
-
-    // І підсилення: періодична повна перевірка (на випадок важких UI)
-    setInterval(runFullPass, 2000);
+    }
   });
+
+  mo.observe(document.documentElement, {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    attributeFilter: ['src', 'style', 'srcset']
+  });
+
+  // 3) Періодичний страховочний прохід (на випадок, якщо щось проскочило)
+  setInterval(() => {
+    try {
+      sweepDOM();
+      patchStylesheets();
+    } catch {}
+  }, 1500);
 })();
