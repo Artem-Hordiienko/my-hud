@@ -1,13 +1,8 @@
 // === HUD replacer with programmatic loads interception ===
 
-// ВАЖЛИВО: у репо файли в hud-assets/assets/*
-const BASE = "https://raw.githubusercontent.com/Artem-Hordiienko/my-hud/main/hud-assets/assets/";
+// ВАЖЛИВО: локальні файли підтягуються з window.NewProjectHud
+const HUD_DATA = (window.NewProjectHud && window.NewProjectHud.weapon) || {};
 const DEBUG = false;
-
-// За потреби — мапа перейменувань
-const NAME_MAP = {
-  // "health.png": "0.png",
-};
 
 // ---------- helpers ----------
 function log(...a){ if(DEBUG) console.log("[HUD]", ...a); }
@@ -28,24 +23,19 @@ function stripToAssetPath(u){
 function fileName(p){
   const m = p.match(/([^\/]+)$/); return m?m[1]:p;
 }
-function toRemote(u){
+function toDataUri(u){
   let p = stripToAssetPath(u);
-  // якщо було "images/...", теж кладемо в BASE + images/...
-  // головне — щоб всередині репо структура співпала
-  const name = fileName(p);
-  if (NAME_MAP[name]) p = p.replace(/[^\/]+$/, NAME_MAP[name]);
-  // у твоєму репо картинки лежать в hud-assets/assets/*
-  // тому все що не починається з 'assets/' — зводимо до 'assets/<name>'
-  if (!/^assets\//i.test(p)) p = "assets/" + name;
-  const url = BASE + p.replace(/^assets\//i, ""); // BASE вже всередині 'assets/'
-  return url;
+  const name = fileName(p).replace(/\..*$/, '');
+  return HUD_DATA[name];
 }
 function rewrite(u){
   if (!u) return u;
   if (looksLocal(u)) {
-    const r = toRemote(u);
-    log("rewrite:", u, "=>", r);
-    return r;
+    const r = toDataUri(u);
+    if (r) {
+      log("rewrite:", u, "=>", "[embedded]");
+      return r;
+    }
   }
   return u;
 }
