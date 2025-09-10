@@ -1,172 +1,242 @@
-// === HUD replacer with programmatic loads interception ===
+<script>
+/**
+ * ============================
+ *  1) БАЗА АСЕТІВ (ШАБЛОН)
+ * ============================
+ * Вставляй СВОЇ base64 (з префіксом data:image/png;base64, …)
+ * Залишив плейсхолдери типу DATA('weapon/0') – заміни їх на реальні рядки.
+ * Формат і ключі — як у твоєму файлі (weapon/logo/icons/speedometer).
+ */
 
-// ВАЖЛИВО: локальні файли підтягуються з window.NewProjectHud
-const HUD_DATA = (window.NewProjectHud && window.NewProjectHud.weapon) || {};
-const DEBUG = false;
+window.NewProjectHud = {
+  weapon: {
+    "0":  "DATA('weapon/0')",
+    "1":  "DATA('weapon/1')",
+    "2":  "DATA('weapon/2')",
+    "3":  "DATA('weapon/3')",
+    "4":  "DATA('weapon/4')",
+    "5":  "DATA('weapon/5')",
+    "6":  "DATA('weapon/6')",
+    "7":  "DATA('weapon/7')",
+    "8":  "DATA('weapon/8')",
+    "9":  "DATA('weapon/9')",
+    "10": "DATA('weapon/10')",
+    "11": "DATA('weapon/11')",
+    "12": "DATA('weapon/12')",
+    "13": "DATA('weapon/13')",
+    "14": "DATA('weapon/14')",
+    "15": "DATA('weapon/15')",
+    "16": "DATA('weapon/16')",
+    "17": "DATA('weapon/17')",
+    "18": "DATA('weapon/18')",
+    "19": "DATA('weapon/19')",
+    "22": "DATA('weapon/22')",
+    "23": "DATA('weapon/23')",
+    "24": "DATA('weapon/24')",
+    "25": "DATA('weapon/25')",
+    "26": "DATA('weapon/26')",
+    "27": "DATA('weapon/27')",
+    "28": "DATA('weapon/28')",
+    "29": "DATA('weapon/29')",
+    "30": "DATA('weapon/30')",
+    "31": "DATA('weapon/31')",
+    "32": "DATA('weapon/32')",
+    "33": "DATA('weapon/33')",
+    "34": "DATA('weapon/34')",
+    "35": "DATA('weapon/35')",
+    "36": "DATA('weapon/36')",
+    "37": "DATA('weapon/37')",
+    "38": "DATA('weapon/38')",
+    "39": "DATA('weapon/39')",
+    "40": "DATA('weapon/40')",
+    "41": "DATA('weapon/41')",
+    "42": "DATA('weapon/42')",
+    "43": "DATA('weapon/43')",
+    "44": "DATA('weapon/44')",
+    "46": "DATA('weapon/46')"
+  },
 
-// ---------- helpers ----------
-function log(...a){ if(DEBUG) console.log("[HUD]", ...a); }
-function isHttpLike(u){ return /^https?:\/\//i.test(u); }
-function isData(u){ return /^data:/i.test(u); }
-function looksLocal(u){
-  if (!u) return false;
-  if (isHttpLike(u) || isData(u)) return false;
-  // все, що схоже на локальні ассети
-  return /(^|\/)(assets|images|uiresources)\/.+\.(png|jpe?g|svg|webp|gif|ico)$/i.test(u);
-}
-function stripToAssetPath(u){
-  return u.replace(/\\/g,'/')
-          .replace(/^.*?(assets\/)/i, 'assets/')
-          .replace(/^.*?(images\/)/i, 'images/')
-          .replace(/^.*?(uiresources\/)/i, 'uiresources/');
-}
-function fileName(p){
-  const m = p.match(/([^\/]+)$/); return m?m[1]:p;
-}
-function toDataUri(u){
-  let p = stripToAssetPath(u);
-  const name = fileName(p).replace(/\..*$/, '');
-  return HUD_DATA[name];
-}
-function rewrite(u){
-  if (!u) return u;
-  if (looksLocal(u)) {
-    const r = toDataUri(u);
-    if (r) {
-      log("rewrite:", u, "=>", "[embedded]");
-      return r;
+  logo: {
+    "1":  "DATA('logo/1')",
+    "2":  "DATA('logo/2')",
+    "3":  "DATA('logo/3')",
+    "4":  "DATA('logo/4')",
+    "5":  "DATA('logo/5')",
+    "6":  "DATA('logo/6')",
+    "7":  "DATA('logo/7')",
+    "8":  "DATA('logo/8')",
+    "9":  "DATA('logo/9')",
+    "10": "DATA('logo/10')",
+    "11": "DATA('logo/11')",
+    "12": "DATA('logo/12')",
+    "13": "DATA('logo/13')",
+    "14": "DATA('logo/14')",
+    "15": "DATA('logo/15')",
+    "16": "DATA('logo/16')",
+    "17": "DATA('logo/17')",
+    "18": "DATA('logo/18')",
+    "19": "DATA('logo/19')",
+    "20": "DATA('logo/20')",
+    "21": "DATA('logo/21')",
+    "22": "DATA('logo/22')",
+    "23": "DATA('logo/23')",
+    "24": "DATA('logo/24')",
+    "25": "DATA('logo/25')"
+  },
+
+  icons: {
+    "active_wanted":   "DATA('icons/active_wanted')",
+    "armour":          "DATA('icons/armour')",
+    "breath":          "DATA('icons/breath')",
+    "cash":            "DATA('icons/cash')",
+    "circle":          "DATA('icons/circle')",
+    "health":          "DATA('icons/health')",
+    "hunger":          "DATA('icons/hunger')",
+    "inactive_wanted": "DATA('icons/inactive_wanted')",
+    "radar":           "DATA('icons/radar')",
+    "wanted_back":     "DATA('icons/wanted_back')",
+    "weapon_back":     "DATA('icons/weapon_back')",
+    "zone":            "DATA('icons/zone')"
+  },
+
+  speedometer: {
+    "main":      "DATA('speedometer/main')",
+    "secondary": "DATA('speedometer/secondary')"
+  }
+};
+
+/**
+ * ====================================
+ *  2) АПЛІЄР ПІДМІНИ (з DOM-спостерігачем)
+ * ====================================
+ * Логіка:
+ *  - на старті й при будь-яких мутаціях шукаємо:
+ *      <img src=".../assets/.../NAME.png">  → підміняємо на data:
+ *      background-image: url(assets/.../NAME.png) → підміняємо на data:
+ *  - визначення категорії:
+ *      з path (weapon|logo|icons|speedometer) або підбором по імені.
+ */
+
+(function () {
+  const HUD = window.NewProjectHud || {};
+  const FLAT = new Map(); // "weapon:1" → "data:..."
+  const KEYONLY = new Map(); // "1" → data (останній виграшний), "health" → data
+
+  // Розплющуємо об’єкт у зручні для пошуку мапи
+  for (const cat of Object.keys(HUD)) {
+    const bucket = HUD[cat] || {};
+    for (const [k, v] of Object.entries(bucket)) {
+      if (!v || typeof v !== 'string' || !v.startsWith('data:image')) continue;
+      FLAT.set(`${cat}:${k}`, v);
+      // На випадок коли у шляху немає назви категорії
+      if (!KEYONLY.has(k)) KEYONLY.set(k, v);
     }
   }
-  return u;
-}
 
-// ---------- DOM replacements ----------
-function replaceImgElement(img){
-  const s = img.getAttribute('src');
-  if (s && looksLocal(s)) {
-    img.addEventListener('error', ()=>console.warn("[HUD] img 404:", img.src), {once:true});
-    img.setAttribute('src', rewrite(s));
+  const RE_FILENAME = /([^\/\\?#]+)\.(png|jpg|jpeg|webp|svg)(?:[?#].*)?$/i;
+
+  function baseNameFromPath(p) {
+    const m = String(p||'').match(RE_FILENAME);
+    return m ? m[1].toLowerCase() : '';
   }
-}
-function replaceSrcset(el){
-  const set = el.getAttribute('srcset');
-  if (!set) return;
-  const out = set.split(',').map(x=>x.trim()).map(part=>{
-    const m = part.match(/^(\S+)(\s+\S+)?$/);
-    if (!m) return part;
-    const url = m[1], d = m[2]||"";
-    return looksLocal(url) ? (rewrite(url)+d) : part;
-  }).join(', ');
-  if (out !== set) el.setAttribute('srcset', out);
-}
-function replaceInlineStyle(el){
-  const st = el.getAttribute('style')||"";
-  if (!/url\(/i.test(st)) return;
-  const out = st.replace(/url\(["']?(.*?)["']?\)/gi, (all,url)=>{
-    return looksLocal(url) ? `url("${rewrite(url)}")` : all;
-  });
-  if (out !== st) el.setAttribute('style', out);
-}
-function patchStylesheets(){
-  for (const sheet of Array.from(document.styleSheets)){
-    let rules; try{ rules = sheet.cssRules; }catch{ continue; }
-    if (!rules) continue;
-    for (const rule of Array.from(rules)){
-      if (!rule.style || !rule.style.cssText) continue;
-      const txt = rule.style.cssText;
-      if (txt.includes('url(')){
-        const patched = txt.replace(/url\(["']?(.*?)["']?\)/gi, (all,url)=>{
-          return looksLocal(url) ? `url("${rewrite(url)}")` : all;
-        });
-        if (patched !== txt) { try{ rule.style.cssText = patched; }catch{} }
+
+  function resolveAsset(pathOrName) {
+    const name = baseNameFromPath(pathOrName) || String(pathOrName||'').toLowerCase();
+
+    // 1) спроба по категорії з шляху
+    const lower = String(pathOrName||'').toLowerCase();
+    let cat = '';
+    if (lower.includes('/weapon/') || lower.includes('\\weapon\\')) cat = 'weapon';
+    else if (lower.includes('/logo/') || lower.includes('\\logo\\')) cat = 'logo';
+    else if (lower.includes('/icons/') || lower.includes('\\icons\\')) cat = 'icons';
+    else if (lower.includes('/speedometer/') || lower.includes('\\speedometer\\')) cat = 'speedometer';
+
+    if (cat) {
+      const key = name; // у твоєму наборі weapon/logo — це числа як рядки; icons — імена
+      const direct = FLAT.get(`${cat}:${key}`);
+      if (direct) return direct;
+    }
+    // 2) без категорії — просто по імені
+    if (KEYONLY.has(name)) return KEYONLY.get(name);
+
+    // 3) спец-кейс: weapon_12 → 12, logo-05 → 5, icon-health → health
+    const numMatch = name.match(/(\d{1,3})$/);
+    if (numMatch) {
+      const n = numMatch[1];
+      for (const c of ['weapon','logo']) {
+        const d = FLAT.get(`${c}:${n}`);
+        if (d) return d;
       }
     }
-  }
-}
-function sweep(root=document){
-  root.querySelectorAll('img[src]').forEach(replaceImgElement);
-  root.querySelectorAll('[srcset]').forEach(replaceSrcset);
-  root.querySelectorAll('[style*="url("]').forEach(replaceInlineStyle);
-}
-
-// ---------- Programmatic loads interception ----------
-(function interceptImages(){
-  // 1) setter для src (працює і для <img>, і для new Image())
-  const desc = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
-  if (desc && desc.set){
-    Object.defineProperty(HTMLImageElement.prototype, 'src', {
-      configurable: true,
-      get(){ return desc.get.call(this); },
-      set(v){ try{ v = rewrite(v); }catch{} desc.set.call(this, v); }
-    });
-    log("hooked HTMLImageElement.src");
+    return null;
   }
 
-  // 2) setAttribute('src'/'srcset')
-  const _setAttr = Element.prototype.setAttribute;
-  Element.prototype.setAttribute = function(name, value){
-    try{
-      if (typeof value === 'string'){
-        if (name === 'src' && this instanceof HTMLImageElement) value = rewrite(value);
-        else if (name === 'srcset') {
-          value = value.split(',').map(x=>x.trim()).map(part=>{
-            const m = part.match(/^(\S+)(\s+\S+)?$/);
-            if (!m) return part;
-            const url = m[1], d = m[2]||"";
-            return looksLocal(url) ? (rewrite(url)+d) : part;
-          }).join(', ');
-        } else if (name === 'style' && /url\(/i.test(value)){
-          value = value.replace(/url\(["']?(.*?)["']?\)/gi, (all,url)=>{
-            return looksLocal(url) ? `url("${rewrite(url)}")` : all;
+  function replaceImg(img) {
+    if (!img || img.dataset.hudApplied === '1') return;
+    const src = img.getAttribute('src') || '';
+    const data = resolveAsset(src);
+    if (data) {
+      img.setAttribute('src', data);
+      img.removeAttribute('srcset');
+      img.dataset.hudApplied = '1';
+    }
+  }
+
+  function replaceBg(el) {
+    if (!el || el.dataset.hudBgApplied === '1') return;
+    const style = getComputedStyle(el);
+    const bg = style && style.backgroundImage || '';
+    const m = bg.match(/url\((['"]?)([^'")]+)\1\)/i);
+    if (!m) return;
+    const url = m[2];
+    const data = resolveAsset(url);
+    if (data) {
+      el.style.backgroundImage = `url("${data}")`;
+      el.dataset.hudBgApplied = '1';
+    }
+  }
+
+  function scanOnce(root) {
+    root = root || document;
+    // img
+    root.querySelectorAll('img[src]').forEach(replaceImg);
+    // елементи з background-image
+    root.querySelectorAll('*').forEach(replaceBg);
+  }
+
+  function observe() {
+    const mo = new MutationObserver(list => {
+      for (const m of list) {
+        if (m.type === 'attributes') {
+          if (m.target.tagName === 'IMG' && m.attributeName === 'src') {
+            replaceImg(m.target);
+          } else if (m.attributeName === 'style' || m.attributeName === 'class') {
+            replaceBg(m.target);
+          }
+        } else if (m.type === 'childList') {
+          m.addedNodes.forEach(n => {
+            if (n.nodeType === 1) scanOnce(n);
           });
         }
       }
-    }catch{}
-    return _setAttr.call(this, name, value);
-  };
+    });
+    mo.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['src','style','class']
+    });
+  }
 
-  // 3) fetch
-  const _fetch = window.fetch;
-  window.fetch = function(input, init){
-    try{
-      if (typeof input === 'string' && looksLocal(input)) input = rewrite(input);
-      else if (input && input.url && looksLocal(input.url)) input = new Request(rewrite(input.url), input);
-    }catch{}
-    return _fetch.call(this, input, init);
-  };
+  // Невеличкий shim проти суворих CSP/полифілів (деякі UI міняють navigator.platform)
+  try {
+    Object.defineProperty(navigator, 'platform', { configurable: true, get() { return navigator?.platform || 'Win32'; }});
+  } catch {}
 
-  // 4) XHR
-  const _open = XMLHttpRequest.prototype.open;
-  XMLHttpRequest.prototype.open = function(method, url, ...rest){
-    try{ if (typeof url === 'string' && looksLocal(url)) url = rewrite(url); }catch{}
-    return _open.call(this, method, url, ...rest);
-  };
-})();
-
-// ---------- boot ----------
-(function main(){
-  console.log("[HUD] hybrid/programmatic replacer active");
-
-  // Перший прохід
-  try { sweep(); patchStylesheets(); } catch(e){ log(e); }
-
-  // Спостерігач за DOM
-  const mo = new MutationObserver(muts=>{
-    for (const m of muts){
-      if (m.type === 'childList'){
-        m.addedNodes.forEach(n=>{
-          if (n.nodeType === 1){ sweep(n); }
-        });
-      } else if (m.type === 'attributes'){
-        if (m.attributeName === 'style') replaceInlineStyle(m.target);
-        else if (m.attributeName === 'srcset') replaceSrcset(m.target);
-      }
-    }
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log('[HUD] compat shim active');
+    scanOnce(document);
+    observe();
   });
-  mo.observe(document.documentElement, {
-    subtree:true, childList:true, attributes:true, attributeFilter:['style','srcset']
-  });
-
-  // Періодичний страховочний прохід
-  setInterval(()=>{ try{ sweep(); patchStylesheets(); }catch{} }, 1500);
 })();
+</script>
